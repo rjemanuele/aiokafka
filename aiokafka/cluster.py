@@ -111,5 +111,9 @@ class ClusterMetadata(BaseClusterMetadata):
 
         log.debug("Updated cluster metadata to %s", self)
 
+        log.debug("Before cluster metadata calling all listeners")
         for listener in self._listeners:
+            log.debug("Before cluster metadata listener %s", listener)
             listener(self)
+            log.debug("After cluster metadata listener %s", listener)
+        log.debug("After cluster metadata calling all listeners")

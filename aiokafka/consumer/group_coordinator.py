@@ -56,7 +56,9 @@ class BaseCoordinator(object):
                 log.debug("Metadata for topic has changed from %s to %s. ",
                           self._metadata_snapshot, metadata_snapshot)
                 self._metadata_snapshot = metadata_snapshot
+                log.debug("_handle_metadata_update before _on_metadata_change")
                 self._on_metadata_change()
+                log.debug("_handle_metadata_update after _on_metadata_change")
 
     def _get_metadata_snapshot(self):
         partitions_per_topic = {}
@@ -89,7 +91,9 @@ class NoGroupCoordinator(BaseCoordinator):
             self._reset_committed_routine(), loop=self._loop)
 
     def _on_metadata_change(self):
+        log.debug("_on_metadata_change before assign_all_partitions")
         self.assign_all_partitions()
+        log.debug("_on_metadata_change after assign_all_partitions")
 
     def assign_all_partitions(self, check_unknown=False):
         """ Assign all partitions from subscribed topics to this consumer.
@@ -97,17 +101,30 @@ class NoGroupCoordinator(BaseCoordinator):
             subscribed topic is not found in metadata response.
         """
         partitions = []
+        log.debug("assign_all_partitions before topic loop")
         for topic in self._subscription.subscription.topics:
+            log.debug("assign_all_partitions before partitions_for_topic")
             p_ids = self._cluster.partitions_for_topic(topic)
+            log.debug("assign_all_partitions after partitions_for_topic")
             if not p_ids and check_unknown:
+                log.debug("RAISING")
                 raise Errors.UnknownTopicOrPartitionError()
+
+            log.debug("assign_all_partitions before partition id looping on %s" % p_ids)
             for p_id in p_ids:
+                log.debug("assign_all_partitions before partition append")
                 partitions.append(TopicPartition(topic, p_id))
+                log.debug("assign_all_partitions after partition append")
+            log.debug("assign_all_partitions after partition id loop")
+        log.debug("assign_all_partitions after topic loop")
+
 
         # If assignment did not change no need to reset it
         assignment = self._subscription.subscription.assignment
+        log.debug("assign_all_partitions before assign_from_subscribed")
         if assignment is None or set(partitions) != assignment.tps:
             self._subscription.assign_from_subscribed(partitions)
+        log.debug("assign_all_partitions after assign_from_subscribed")
 
     async def _reset_committed_routine(self):
         """ Group coordinator will reset committed points to UNKNOWN_OFFSET

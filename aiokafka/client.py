@@ -238,17 +238,22 @@ class AIOKafkaClient:
         """routine (async task) for synchronize cluster metadata every
         `metadata_max_age_ms` milliseconds"""
         while True:
+            log.debug("_md_syncronizer before wait")
             await asyncio.wait(
                 [self._md_update_waiter],
                 timeout=self._metadata_max_age_ms / 1000,
                 loop=self._loop)
+            log.debug("_md_syncronizer after wait")
 
             topics = self._topics
             if self._md_update_fut is None:
                 self._md_update_fut = create_future(loop=self._loop)
+            log.debug("_md_syncronizer before _metadata_update")
             ret = await self._metadata_update(self.cluster, topics)
+            log.debug("_md_syncronizer after _metadata_update")
             # If list of topics changed during metadata update we must update
             # it again right away.
+            log.debug("_md_syncronizer after self._metadata_update self._topics: %s" % self._topics)
             if topics != self._topics:
                 continue
             # Earlier this waiter was set before sending metadata_request,
@@ -283,7 +288,9 @@ class AIOKafkaClient:
             nodeids.append('bootstrap')
         random.shuffle(nodeids)
         for node_id in nodeids:
+            log.debug("_metadata_update before _get_conn")
             conn = await self._get_conn(node_id)
+            log.debug("_metadata_update after _get_conn")
 
             if conn is None:
                 continue
@@ -291,7 +298,9 @@ class AIOKafkaClient:
                       metadata_request, node_id)
 
             try:
+                log.debug("_metadata_update before conn.send")
                 metadata = await conn.send(metadata_request)
+                log.debug("_metadata_update after conn.send")
             except KafkaError as err:
                 log.error(
                     'Unable to request metadata from node with id %s: %s',
@@ -302,9 +311,12 @@ class AIOKafkaClient:
             # we want may still be in the process of being created which means
             # we will get errors and no nodes until it exists
             if not metadata.brokers:
+                log.debug("_metadata_update returning 1")
                 return False
 
+            log.debug("_metadata_update before update_metadata")
             cluster_metadata.update_metadata(metadata)
+            log.debug("_metadata_update after update_metadata")
 
             # We only keep bootstrap connection to update metadata until
             # proper cluster layout is available.
@@ -316,7 +328,9 @@ class AIOKafkaClient:
         else:
             log.error('Unable to update metadata from %s', nodeids)
             cluster_metadata.failed_update(None)
+            log.debug("_metadata_update returning 2")
             return False
+        log.debug("_metadata_update returning 3")
         return True
 
     def force_metadata_update(self):

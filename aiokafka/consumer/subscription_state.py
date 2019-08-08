@@ -130,7 +130,9 @@ class SubscriptionState:
         for waiter in self._assignment_waiters:
             if not waiter.done():
                 waiter.set_result(None)
+        log.debug("before clearing assignment_waiters")
         self._assignment_waiters.clear()
+        log.debug("after clearing assignment_waiters")
 
     # Consumer callable API:
 
@@ -216,7 +218,9 @@ class SubscriptionState:
             SubscriptionType.AUTO_PATTERN, SubscriptionType.AUTO_TOPICS]
 
         self._subscription._assign(assignment)
+        log.debug("assign_all_partitions before assign_from_subscribed")
         self._notify_assignment_waiters()
+        log.debug("assign_all_partitions after assign_from_subscribed")
 
     def begin_reassignment(self):
         """ Signal from Coordinator that a group re-join is needed. For example
